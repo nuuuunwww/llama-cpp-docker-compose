@@ -1,5 +1,39 @@
 services:
-  llama-cpp-gpu:
+  llm-gpu:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - GGML_CUDA_DISABLE_GRAPHS=1
+    command: >
+      -m /models/${LLM_MODEL_FILE}
+      --host 0.0.0.0
+      --port 8080
+      --n-gpu-layers ${LLM_N_GPU_LAYERS:-99}
+      --ctx-size ${LLM_CTX_SIZE:-32768}
+      --temp ${LLM_TEMP:-1.0}
+      --top-k ${LLM_TOP_K:-64}
+      --top-p ${LLM_TOP_P:-0.95}
+      --min-p ${LLM_MIN_P:-0.0}
+      --repeat-penalty ${LLM_REPEAT_PENALTY:-1.0}
+      --threads ${LLM_THREADS:-8}
+      --parallel ${LLM_N_PARALLEL:-4}
+      --cont-batching
+      --mlock      
+
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  embd-gpu:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
     ports:
       - "8081:8080"
@@ -7,22 +41,23 @@ services:
       - ./models:/models:ro
     environment:
       - CUDA_VISIBLE_DEVICES=0
+      - GGML_CUDA_DISABLE_GRAPHS=1
     command: >
-      -m /models/${LLAMA_MODEL_FILE}
+      -m /models/${EMBD_MODEL_FILE}
       --host 0.0.0.0
       --port 8080
-      --n-gpu-layers ${LLAMA_N_GPU_LAYERS:-99}
-      --ctx-size ${LLAMA_CTX_SIZE:-32768}
-      --temp ${LLAMA_TEMP:-1.0}
-      --top-k ${LLAMA_TOP_K:-64}
-      --top-p ${LLAMA_TOP_P:-0.95}
-      --min-p ${LLAMA_MIN_P:-0.0}
-      --repeat-penalty ${LLAMA_REPEAT_PENALTY:-1.0}
-      --threads ${LLAMA_THREADS:-8}
-      --parallel ${LLAMA_N_PARALLEL:-4}
+      --n-gpu-layers ${EMBD_N_GPU_LAYERS:-99}
+      --ctx-size ${EMBD_CTX_SIZE:-32768}
+      --temp ${EMBD_TEMP:-1.0}
+      --top-k ${EMBD_TOP_K:-64}
+      --top-p ${EMBD_TOP_P:-0.95}
+      --min-p ${EMBD_MIN_P:-0.0}
+      --repeat-penalty ${EMBD_REPEAT_PENALTY:-1.0}
+      --threads ${EMBD_THREADS:-8}
+      --parallel ${EMBD_N_PARALLEL:-4}
       --cont-batching
-      --log-verbose
-      --mlock
+      --mlock      
+
     restart: unless-stopped
     deploy:
       resources:
